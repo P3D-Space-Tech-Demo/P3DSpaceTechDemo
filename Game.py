@@ -126,7 +126,7 @@ class Game(ShowBase):
 
         ### Game-over menu
 
-        self.gameOverScreen = DirectDialog(frameSize = (-0.7, 0.7, -0.7, 0.7),
+        self.gameOverScreen = DirectDialog(frameSize = (-0.5, 0.5, -0.7, 0.7),
                                            fadeScreen = 0.4,
                                            relief = DGG.FLAT)
         self.gameOverScreen.hide()
@@ -134,38 +134,43 @@ class Game(ShowBase):
         label = DirectLabel(text = "Game Over!",
                             parent = self.gameOverScreen,
                             scale = 0.1,
-                            pos = (0, 0, 0.2),
+                            pos = (0, 0, 0.55),
                             #text_font = self.font,
                             relief = None)
 
-        self.finalScoreLabel = DirectLabel(text = "",
-                                           parent = self.gameOverScreen,
-                                           scale = 0.07,
-                                           pos = (0, 0, 0),
-                                           #text_font = self.font,
-                                           relief = None)
-
-        btn = DirectButton(text = "Restart",
-                           command = self.openMenu,
-                           pos = (-0.3, 0, -0.2),
+        btn = DirectButton(text = "Retry",
+                           command = self.restartCurrentSection,
+                           pos = (0, 0, 0.25),
                            parent = self.gameOverScreen,
-                           scale = 0.07,
+                           scale = 0.1,
                            #text_font = self.font,
                            frameSize = (-4, 4, -1, 1),
                            text_scale = 0.75,
-                           relief = DGG.FLAT,
+                           #relief = DGG.FLAT,
+                           text_pos = (0, -0.2))
+        btn.setTransparency(True)
+
+        btn = DirectButton(text = "Return to Menu",
+                           command = self.openMenu,
+                           pos = (0, 0, 0),
+                           parent = self.gameOverScreen,
+                           scale = 0.1,
+                           #text_font = self.font,
+                           frameSize = (-4, 4, -1, 1),
+                           text_scale = 0.75,
+                           #relief = DGG.FLAT,
                            text_pos = (0, -0.2))
         btn.setTransparency(True)
 
         btn = DirectButton(text = "Quit",
                            command = self.quit,
-                           pos = (0.3, 0, -0.2),
+                           pos = (0, 0, -0.25),
                            parent = self.gameOverScreen,
-                           scale = 0.07,
+                           scale = 0.1,
                            #text_font = self.font,
                            frameSize = (-4, 4, -1, 1),
                            text_scale = 0.75,
-                           relief = DGG.FLAT,
+                           #relief = DGG.FLAT,
                            text_pos = (0, -0.2))
         btn.setTransparency(True)
 
@@ -205,6 +210,10 @@ class Game(ShowBase):
 
         ### Section-data
 
+        self.currentSectionIndex = 0
+        self.currentSectionData = None
+        self.currentSectionObject = None
+
         # Stores section-modules and the menu, if any, that's to be
         # shown if they're loaded without the preceding section
         # being run
@@ -235,6 +244,10 @@ class Game(ShowBase):
         self.shipSelectionMenu.setPos(self.render, -0.6, 0, 0)
 
     def openMenu(self):
+        self.currentSectionIndex = 0
+        self.currentSectionData = None
+
+        self.gameOverScreen.hide()
         self.mainMenuBackdrop.show()
         self.mainMenuPanel.show()
 
@@ -258,8 +271,14 @@ class Game(ShowBase):
         self.startSectionInternal(sectionIndex, data)
 
     def startSectionInternal(self, index, data):
+        if self.currentSectionObject is not None:
+            self.currentSectionObject.cleanup()
+
         self.mainMenuPanel.hide()
         self.mainMenuBackdrop.hide()
+
+        self.currentSectionIndex = index
+        self.currentSectionData = data
 
         sectionModule = self.sections[index][0]
 
@@ -268,12 +287,20 @@ class Game(ShowBase):
         elif hasattr(sectionModule, "initialize"):
             initialisationMethod = sectionModule.initialize
 
-        initialisationMethod(self, data)
+        self.currentSectionObject = initialisationMethod(self, data)
 
     def selectSection(self):
         self.sectionMenu.show()
 
+    def restartCurrentSection(self):
+        self.gameOverScreen.hide()
+        self.startSectionInternal(self.currentSectionIndex, self.currentSectionData)
+
     def gameOver(self):
+        if self.currentSectionObject is not None:
+            self.currentSectionObject.cleanup()
+            self.currentSectionObject = None
+
         if self.gameOverScreen.isHidden():
             self.gameOverScreen.show()
 
